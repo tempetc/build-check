@@ -12,7 +12,7 @@ on:
 
 jobs:
   build:
-    name: glados/railgun checkin
+    name: two Webs Checker
     runs-on: ubuntu-latest
       
     permissions:
@@ -44,9 +44,9 @@ jobs:
         pip install pypushdeer
 
     # 执行 签到脚本
-    - name: Running checkin
+    - name: Running Check
       run: |
-        python checkin.py
+        python check.py
       env:
         PUSHDEER_SENDKEY: ${{ secrets.PUSHDEER_SENDKEY }}
         GLADOS_COOKIES: ${{ secrets.GLADOS_COOKIES }}
