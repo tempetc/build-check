@@ -1,4 +1,4 @@
-name: auto check
+name: Situation Checker
 
 on:
   workflow_dispatch:
