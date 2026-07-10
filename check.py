@@ -93,9 +93,14 @@ def log_method(func):
 class Config:
     """应用配置"""
 
-    ENV_COOKIES = "GLADOS_COOKIES"
     ENV_EXCHANGE_PLAN = "GLADOS_EXCHANGE_PLAN"
     ENV_VERBOSE = "GLADOS_VERBOSE"
+
+    """域名与环境变量映射"""
+    DOMAIN_ENV_MAP = {
+        "glados.cloud": "GLADOS_COOKIES",
+        "railgun.info": "RAILGUN_COOKIES",
+    }
 
     """默认兑换计划"""
     DEFAULT_EXCHANGE_PLAN = "plan500"
@@ -103,8 +108,8 @@ class Config:
     """默认是否输出详细响应"""
     DEFAULT_VERBOSE = False
 
-    """默认域名"""
-    DOMAINS = ["glados.cloud","railgun.info"]
+    """域名列表"""
+    DOMAINS = list(DOMAIN_ENV_MAP.keys())
 
     """兑换计划列表"""
     EXCHANGE_PLANS = {
@@ -114,25 +119,28 @@ class Config:
     }
 
     def __init__(self):
-        self.cookies_list: List[str] = []
+        # 存储每个域名对应的 Cookie 列表
+        self.domain_cookies: Dict[str, List[str]] = {}
         self.exchange_plan: str = self.DEFAULT_EXCHANGE_PLAN
         self.verbose: bool = self.DEFAULT_VERBOSE
         self._load_config()
 
     def _load_config(self) -> None:
         """加载配置"""
-        raw_cookies_env: Optional[str] = os.environ.get(self.ENV_COOKIES)
+        
+        # 1. 加载各个域名的 Cookie
+        for domain, env_var in self.DOMAIN_ENV_MAP.items():
+            raw_cookies_env: Optional[str] = os.environ.get(env_var)
+            if not raw_cookies_env:
+                logger.warning(f"{LogEmoji.WARNING} 环境变量 '{env_var}' 未设置, 将跳过 {domain} 的签到。")
+                self.domain_cookies[domain] = []
+            else:
+                cookies = [cookie.strip() for cookie in raw_cookies_env.split("&") if cookie.strip()]
+                self.domain_cookies[domain] = cookies
+                logger.info(f"{LogEmoji.INFO} {domain} 共加载了 {len(cookies)} 个 Cookie。")
+        
+        # 2. 加载兑换计划
         exchange_plan_env: Optional[str] = os.environ.get(self.ENV_EXCHANGE_PLAN)
-        verbose_env: Optional[str] = os.environ.get(self.ENV_VERBOSE)
-
-        if not raw_cookies_env:
-            logger.warning(f"{LogEmoji.WARNING} 环境变量 '{self.ENV_COOKIES}' 未设置。")
-            self.cookies_list = []
-        else:
-            self.cookies_list = [cookie.strip() for cookie in raw_cookies_env.split("&") if cookie.strip()]
-            if not self.cookies_list:
-                raise ValueError(f"环境变量 '{self.ENV_COOKIES}' 已设置，但未包含任何有效的 Cookie。")
-
         if not exchange_plan_env:
             logger.warning(f"{LogEmoji.WARNING} 环境变量 '{self.ENV_EXCHANGE_PLAN}' 未设置，将使用默认兑换计划 {self.DEFAULT_EXCHANGE_PLAN}。")
             self.exchange_plan = self.DEFAULT_EXCHANGE_PLAN
@@ -144,9 +152,10 @@ class Config:
                 logger.warning(f"{LogEmoji.WARNING} 环境变量 '{self.ENV_EXCHANGE_PLAN}' 的值 '{exchange_plan_env}' 无效，将使用默认兑换计划 {self.DEFAULT_EXCHANGE_PLAN}。")
                 self.exchange_plan = self.DEFAULT_EXCHANGE_PLAN
 
-        logger.info(f"{LogEmoji.INFO} 共加载了 {len(self.cookies_list)} 个 Cookie 用于签到。")
         logger.info(f"{LogEmoji.INFO} 当前 {self.ENV_EXCHANGE_PLAN}: {self.exchange_plan}。")
 
+        # 3. 加载输出配置
+        verbose_env: Optional[str] = os.environ.get(self.ENV_VERBOSE)
         if verbose_env is not None:
             verbose_env_lower = verbose_env.lower()
             if verbose_env_lower in ["true", "1", "yes", "y"]:
@@ -227,6 +236,7 @@ class API:
 
         try:
             if method.upper() == "POST":
+                # 此处已使用修复后的 json=data
                 response = self.session.post(url, headers=session_headers, json=data, timeout=(60, 120))
             elif method.upper() == "GET":
                 response = self.session.get(url, headers=session_headers, timeout=(60, 120))
@@ -393,17 +403,20 @@ class Checker:
 
     def checkin_all(self):
         """执行所有签到任务"""
-        cookie_count = len(self.config.cookies_list)
-        domain_count = len(self.config.DOMAINS)
-        total_tasks = cookie_count * domain_count
+        total_tasks = sum(len(cookies) for cookies in self.config.domain_cookies.values())
         task_idx = 0
 
-        logger.info(f"{LogEmoji.INFO} 共 {cookie_count} 个 Cookie, {domain_count} 个域名, 共 {total_tasks} 个任务")
+        logger.info(f"{LogEmoji.INFO} 共发现 {total_tasks} 个待执行的签到任务")
 
-        for cookie_idx, cookie in enumerate(self.config.cookies_list, 1):
-            logger.info(f"{LogEmoji.START} ========== 开始处理 Cookie {cookie_idx} ==========")
+        # 按域名维度遍历
+        for domain in self.config.DOMAINS:
+            cookies = self.config.domain_cookies.get(domain, [])
+            if not cookies:
+                continue
 
-            for domain in self.config.DOMAINS:
+            logger.info(f"{LogEmoji.START} ========== 开始处理域名 {domain} ==========")
+
+            for cookie_idx, cookie in enumerate(cookies, 1):
                 task_idx += 1
                 logger.info(f"{LogEmoji.INFO} ----- 任务 {task_idx}/{total_tasks}: {LogEmoji.COOKIE}[{cookie_idx}] on {LogEmoji.DOMAIN}[{domain}] -----")
 
@@ -467,7 +480,8 @@ class Checker:
         send_content_lines = []
         log_content_lines = []
         for i, res in enumerate(results, 1):
-            line = f"#{i} P:{res['points']} 剩余:{res['days']} 总积分:{res['points_total']} | {res['status']} | {res['exchange']}"
+            # 加入了 [domain] 前缀方便查看不同站点的结果
+            line = f"[{res['domain']}] #{res['cookie_index']} P:{res['points']} 剩余:{res['days']} 总积分:{res['points_total']} | {res['status']} | {res['exchange']}"
             send_content_lines.append(line)
             # 无视 verbose，强制在底部总结输出详细日志
             log_content_lines.append(line)
@@ -475,7 +489,8 @@ class Checker:
         content = "\n".join(send_content_lines)
         log_content = "\n".join(log_content_lines)
         return title, content, log_content
-        
+
+
 # 初始化日志
 logger = init_logger()
 
@@ -487,8 +502,9 @@ def main():
         logger.info(f"{LogEmoji.START} 步骤 1: 加载配置")
         config = Config()
 
-        if not config.cookies_list:
-            logger.error(f"{LogEmoji.ERROR} 未找到有效的 Cookie, 退出程序。")
+        # 检查是否所有域名的 cookie 都为空
+        if not any(config.domain_cookies.values()):
+            logger.error(f"{LogEmoji.ERROR} 未找到任何有效的 Cookie, 退出程序。")
             title, content = "# 未找到 cookies!", ""
         else:
             # 2. 执行签到
