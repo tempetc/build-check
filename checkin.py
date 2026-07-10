@@ -389,29 +389,6 @@ class CheckinResult:
         result_dict = asdict(self)
         return result_dict
 
-
-class PushService:
-    """推送服务"""
-
-    def __init__(self, config: Config):
-        self.config = config
-
-    def send(self, title: str, content: str) -> bool:
-        """发送推送"""
-        if not self.config.push_key:
-            logger.info(f"{LogEmoji.WARNING} 未设置推送密钥，跳过推送通知。")
-            return False
-
-        try:
-            pushdeer = PushDeer(pushkey=self.config.push_key)
-            pushdeer.send_text(title, desp=content)
-            logger.info(f"{LogEmoji.SUCCESS} 推送通知发送成功。")
-            return True
-        except Exception as e:
-            logger.error(f"{LogEmoji.ERROR} 发送推送通知失败: {e}")
-            return False
-
-
 class Checker:
     """签到"""
 
@@ -544,10 +521,6 @@ def main():
         logger.error(f"{LogEmoji.ERROR} 主程序执行过程中发生未预期的错误: {e}")
         title, content, log_content = "# 脚本执行出错", str(e), str(e)
 
-    # 4. 发送推送
-    logger.info(f"{LogEmoji.START} 步骤 4: 发送推送")
-    push_service = PushService(config if "config" in locals() else "")
-    push_service.send(title, content)
     logger.info(f"{LogEmoji.END} 签到完成")
 
 
