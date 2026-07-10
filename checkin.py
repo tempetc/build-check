@@ -378,8 +378,6 @@ class CheckinResult:
         result_dict = asdict(self)
         return result_dict
 
-logger.info(f"{LogEmoji.SUCCESS} 没有配置推送服务")
-
 class Checker:
     """签到"""
 
@@ -411,7 +409,8 @@ class Checker:
 
                 result = self._checkin_on_domain(cookie, cookie_idx, domain)
                 self.results.append(result)
-                
+
+                result_message = f"结果: {result.status}"
                 if result.code == CheckinStatus.SUCCESS:
                     if self.config.verbose:
                         result_message = f"结果: {result.status}, 获得 {result.points} 积分, 剩余 {result.days}, 总 {result.points_total}, {result.exchange}"
@@ -512,7 +511,7 @@ def main():
         title, content, log_content = "# 脚本执行出错", str(e), str(e)
 
     # 4. 发送推送
-    logger.info(f"{LogEmoji.START} 步骤 4: 发送推送")
+    logger.info(f"{LogEmoji.START} 未配置推送")
     logger.info(f"{LogEmoji.END} 签到完成")
 
 
