@@ -378,6 +378,7 @@ class CheckinResult:
         result_dict = asdict(self)
         return result_dict
 
+
 class Checker:
     """签到"""
 
@@ -411,10 +412,14 @@ class Checker:
                 self.results.append(result)
 
                 result_message = f"结果: {result.status}"
-                if result.code == CheckinStatus.SUCCESS:
+                # 主要修改点：将 SUCCESS 和 REPEAT 合并处理，输出详细日志
+                if result.code in (CheckinStatus.SUCCESS, CheckinStatus.REPEAT):
                     if self.config.verbose:
                         result_message = f"结果: {result.status}, 获得 {result.points} 积分, 剩余 {result.days}, 总 {result.points_total}, {result.exchange}"
-                    self._log(cookie_idx, domain, LogEmoji.SUCCESS, result_message, force=True)
+                    
+                    # 动态分配 Emoji：成功打勾，重复打转圈
+                    current_emoji = LogEmoji.SUCCESS if result.code == CheckinStatus.SUCCESS else LogEmoji.REPEAT
+                    self._log(cookie_idx, domain, current_emoji, result_message, force=True)
                 else:
                     self._log(cookie_idx, domain, LogEmoji.WARNING, result_message, force=True)
 
