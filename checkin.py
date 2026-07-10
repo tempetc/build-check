@@ -455,30 +455,22 @@ class Checker:
         """获取所有结果"""
         return [result.to_dict() for result in self.results]
 
-def format_results(self) -> Tuple[str, str, str]:
+    def format_results(self) -> Tuple[str, str, str]:
         """格式化结果"""
         results = self.get_results()
+
         success_count = sum(1 for r in results if r["code"] == CheckinStatus.SUCCESS)
         repeat_count = sum(1 for r in results if r["code"] == CheckinStatus.REPEAT)
         fail_count = sum(1 for r in results if r["code"] == CheckinStatus.FAILURE)
 
-        # 🌟 新增：计算本次签到总共获取的积分
-        total_earned_points = 0
-        for r in results:
-            try:
-                # 尝试将 points 转换为数字并累加
-                total_earned_points += int(float(r["points"]))
-            except (ValueError, TypeError):
-                pass
-
-        # 🌟 修改：在标题末尾追加本次总共获取到的积分
-        title = f"GLaDOS 签到, 成功{success_count}, 失败{fail_count}, 重复{repeat_count}, 共获取 {total_earned_points} 积分"
+        title = f"GLaDOS 签到, 成功{success_count}, 失败{fail_count}, 重复{repeat_count}"
 
         send_content_lines = []
         log_content_lines = []
         for i, res in enumerate(results, 1):
             line = f"#{i} P:{res['points']} 剩余:{res['days']} 总积分:{res['points_total']} | {res['status']} | {res['exchange']}"
             send_content_lines.append(line)
+
             if self.config.verbose:
                 log_line = line
             else:
@@ -488,7 +480,6 @@ def format_results(self) -> Tuple[str, str, str]:
         content = "\n".join(send_content_lines)
         log_content = "\n".join(log_content_lines)
         return title, content, log_content
-
 
 # 初始化日志
 logger = init_logger()
