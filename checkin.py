@@ -388,11 +388,10 @@ class Checker:
 
     def _log(self, cookie_idx: int, domain: str, emoji: str, message: str, force: bool = False) -> None:
         """统一日志输出方法"""
-
         if self.config.verbose or force:
             logger.info(f"{LogEmoji.COOKIE}[{cookie_idx}] {LogEmoji.DOMAIN}[{domain}] {emoji} {message}")
 
-def checkin_all(self):
+    def checkin_all(self):
         """执行所有签到任务"""
         cookie_count = len(self.config.cookies_list)
         domain_count = len(self.config.DOMAINS)
@@ -411,7 +410,6 @@ def checkin_all(self):
                 result = self._checkin_on_domain(cookie, cookie_idx, domain)
                 self.results.append(result)
 
-                # 修改点 1：去掉了对 verbose 的判断，成功或重复时强制输出详细信息
                 if result.code in (CheckinStatus.SUCCESS, CheckinStatus.REPEAT):
                     result_message = f"结果: {result.status}, 获得 {result.points} 积分, 剩余 {result.days}, 总 {result.points_total}, {result.exchange}"
                     current_emoji = LogEmoji.SUCCESS if result.code == CheckinStatus.SUCCESS else LogEmoji.REPEAT
@@ -419,7 +417,7 @@ def checkin_all(self):
                 else:
                     result_message = f"结果: {result.status}"
                     self._log(cookie_idx, domain, LogEmoji.WARNING, result_message, force=True)
-                    
+
     def _checkin_on_domain(self, cookie: str, cookie_idx: int, domain: str) -> CheckinResult:
         result = CheckinResult(cookie_idx, domain)
 
@@ -456,7 +454,7 @@ def checkin_all(self):
         """获取所有结果"""
         return [result.to_dict() for result in self.results]
 
-def format_results(self) -> Tuple[str, str, str]:
+    def format_results(self) -> Tuple[str, str, str]:
         """格式化结果"""
         results = self.get_results()
 
@@ -471,14 +469,13 @@ def format_results(self) -> Tuple[str, str, str]:
         for i, res in enumerate(results, 1):
             line = f"#{i} P:{res['points']} 剩余:{res['days']} 总积分:{res['points_total']} | {res['status']} | {res['exchange']}"
             send_content_lines.append(line)
-            # 修改点 2：无论 verbose 是什么，最终的总结栏强制使用详细信息
+            # 无视 verbose，强制在底部总结输出详细日志
             log_content_lines.append(line)
 
         content = "\n".join(send_content_lines)
         log_content = "\n".join(log_content_lines)
         return title, content, log_content
-
-
+        
 # 初始化日志
 logger = init_logger()
 
