@@ -56,6 +56,9 @@ jobs:
 
     - name: Keep alive
       uses: liskin/gh-workflow-keepalive@v1 
+      
+    - name: Keepalive Workflow
+      uses: gautamkrishnar/keepalive-workflow@2.0.10
         
     - name: Delete workflow runs
       uses: Mattraks/delete-workflow-runs@v2
