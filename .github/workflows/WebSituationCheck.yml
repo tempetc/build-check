@@ -8,63 +8,64 @@ on:
       - 'README.md'
       - 'imgs/**'
   schedule:
-    - cron: '0 22 * * *'
+    - cron: '0 2 * * *'
 
 jobs:
+  # ---------- 主任务：签到与清理 ----------
   build:
     name: two Webs Checker
     runs-on: ubuntu-latest
-      
     permissions:
-      contents: read
-      actions: write
-
+      contents: read      # 仅需读取代码
+      actions: write      # 用于删除 workflow 运行记录（Mattraks/delete-workflow-runs 需要）
     strategy:
       matrix:
         python-version: [3.13]
-
-    # 这里加入全局环境变量，强制后续所有第三方 actions 兼容 Node.js 24 运行环境
     env:
+      # 强制第三方 actions 兼容 Node.js 24
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v6
+      - name: Checkout Code
+        uses: actions/checkout@v6
 
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v6
-      with:
-        python-version: ${{ matrix.python-version }}
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
 
-    # 安装 python 库
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install requests
-        pip install pypushdeer
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests pypushdeer
 
-    # 执行 签到脚本
-    - name: Running Check
-      run: |
-        python check.py
-      env:
-        PUSHDEER_SENDKEY: ${{ secrets.PUSHDEER_SENDKEY }}
-        GLADOS_COOKIES: ${{ secrets.GLADOS_COOKIES }}
-        RAILGUN_COOKIES: ${{ secrets.RAILGUN_COOKIES }}
-        GLADOS_EXCHANGE_PLAN: ${{ secrets.GLADOS_EXCHANGE_PLAN }}
-        GLADOS_VERBOSE: ${{ secrets.GLADOS_VERBOSE }}
+      - name: Running Check
+        run: python check.py
+        env:
+          PUSHDEER_SENDKEY: ${{ secrets.PUSHDEER_SENDKEY }}
+          GLADOS_COOKIES: ${{ secrets.GLADOS_COOKIES }}
+          RAILGUN_COOKIES: ${{ secrets.RAILGUN_COOKIES }}
+          GLADOS_EXCHANGE_PLAN: ${{ secrets.GLADOS_EXCHANGE_PLAN }}
+          GLADOS_VERBOSE: ${{ secrets.GLADOS_VERBOSE }}
 
-    - name: Keep alive
-      uses: liskin/gh-workflow-keepalive@v1 
-      
-    - name: Keepalive Workflow
-      uses: gautamkrishnar/keepalive-workflow@2.0.10
-        
-    - name: Delete workflow runs
-      uses: Mattraks/delete-workflow-runs@v2
-      with:
-        token: ${{ github.token }}
-        repository: ${{ github.repository }}
-        retain_days: 7
-        keep_minimum_runs: 7
-        delete_run_by_conclusion_pattern: success
+      - name: Delete workflow runs
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          retain_days: 7
+          keep_minimum_runs: 7
+          delete_run_by_conclusion_pattern: success
+
+  # ---------- 独立 Job ----------
+  keepalive:
+    name: recheck Workflow
+    runs-on: ubuntu-latest
+    # 仅需 actions:write 
+    permissions:
+      actions: write
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4   #  action 需要仓库上下文
+      - name: Keep workflow alive
+        uses: liskin/gh-workflow-keepalive@v1
