@@ -21,7 +21,7 @@ jobs:
     strategy:
       matrix:
         python-version: [3.13]
-    env:
+#    env:
       # 强制第三方 actions 兼容 Node.js 24
 #      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
