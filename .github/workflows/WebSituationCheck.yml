@@ -23,7 +23,7 @@ jobs:
         python-version: [3.13]
     env:
       # 强制第三方 actions 兼容 Node.js 24
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+#      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout Code
@@ -66,6 +66,6 @@ jobs:
       actions: write
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v4   #  action 需要仓库上下文
+        uses: actions/checkout@v6   #  action 需要仓库上下文
       - name: Keep ReCheck
         uses: liskin/gh-workflow-keepalive@v1
